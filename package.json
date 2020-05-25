@@ -1,0 +1,11 @@
+{
+  "name": "fasteditor",
+  "version": "1.0.0",
+  "description": "Very simple content editor jQuery plugin on promises",
+  "keywords": ["editor"],
+  "main": "app/src/fasteditor.js",
+  "dependencies": {},
+  "devDependencies": {},
+  "author": "unbywyd",
+  "license": "ISC"
+}

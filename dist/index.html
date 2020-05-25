@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>FastEditor</title>
+    <style>
+	    .demo-controls {
+	        text-align: center;
+	        padding: 20px;
+	    }
+	    .items {
+	        max-width: 1000px;
+	        margin: 0 auto;
+	        border: 2px solid #1ec1ec;
+	        border-radius: 3px;
+	        padding: 20px;
+	    }
+	    .item {
+	        background-color: #fafafa;
+	        padding: 20px;
+	        box-shadow: 1px 1px 3px rgba(0, 0, 0, .1);
+	        margin-bottom: 5px;
+	    }
+
+	    .__fasteditor-inited.__fasteditor-disabled .__fasteditor-control {
+	        opacity: .4;
+	    }
+	    @keyframes spin {
+	        from {
+	            transform: rotate(0deg);
+	        }
+
+	        to {
+	            transform: rotate(360deg);
+	        }
+	    }
+	    .__fasteditor-loading {
+	        position: relative;
+	        outline: none;
+	    }
+	    .__fasteditor-loading:after {
+	        content: '';
+	        display: inline-block;
+	        vertical-align: middle;
+	        width: 12px;
+	        height: 12px;
+	        margin-left: 5px;
+	        border-radius: 50%;
+	        border: 2px solid blue;
+	        border-left-color: transparent;
+	        position: absolute;
+	        left: 50%;
+	        top: 50%;
+	        margin-left: -6px;
+	        margin-top: -6px;
+	        animation: spin 1s infinite linear;
+	    }
+	    .__fasteditor-inited:not(.__fasteditor-disabled) .__fasteditor-editor {
+	        transition: all .2s;
+	        background-color: #e2f3ff;
+	    }
+	    .__fasteditor-inited:not(.__fasteditor-disabled) .__fasteditor-editor.__fasteditor-loading {
+	        background-color: #fffdc3;
+	        color: #d3a946;
+	    }
+	    .__fasteditor-editor.__fasteditor-loading,
+	    .__fasteditor-editor.__fasteditor-success {
+	        padding: 10px;
+	    }
+	    .__fasteditor-inited:not(.__fasteditor-disabled) .__fasteditor-editable {
+	        box-shadow: 1px 1px 3px rgba(0, 0, 0, 0.1), 0 0 0 1px blue;
+	        padding: 10px;
+	        background-color: #fff;
+	        color: #000;
+	        outline: none;
+	    }
+	    .__fasteditor-success {
+	        background-color: #c0ffcf;
+	    }
+	    .__fasteditor-success:after {
+	        content: '✔';
+	        font-size: 16px;
+	        display: inline-block;
+	        vertical-align: middle;
+	        margin-left: 5px;
+	        color: #01cc31;
+	    }
+    </style>
+</head>
+
+<body>
+    <div class="demo-controls">
+        <button id="destroy">Destroy</button>
+        <button id="switcher">Disable</button>
+    </div>
+    <div class="items">
+        <article class="item" data-id="23">
+            <h2 class="edit-it">Title</h2>
+            <p class="edit-it">Lorem ipsum dolor sit amet, consectetur adipisicing elit. Reiciendis sint quaerat sunt asperiores perferendis odio facere sed explicabo recusandae illo.</p>
+        </article>
+        <article class="item">
+            <h2 class="edit-it">Title</h2>
+            <p class="edit-it">Lorem ipsum dolor sit amet, consectetur adipisicing elit. Reiciendis sint quaerat sunt asperiores perferendis odio facere sed explicabo recusandae illo.</p>
+        </article>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cash/7.0.1/cash.min.js"></script>
+    <script src="fasteditor.min.js"></script>
+    <script>
+	    (function($) {
+	        $(document).ready(function() {
+	            function initForItems($el) {
+	                if (!$el) {
+	                    $el = $('.item');
+	                }
+	                let plugin = $el.fastEditor({
+	                    editMode: true,
+	                    controlsPosition: 'bottom',
+	                    editElementSelector: '.edit-it',
+	                    controls: [{
+	                        tag: 'button',
+	                        label: 'Remove',
+	                        action: 'remove',
+	                        class: 'remove-item-btn'
+	                    }],
+	                });
+	                if (plugin) {
+	                    let { workers, emitter } = plugin;
+	                    workers.remove = function(data) {
+	                        return new Promise((res, rej) => {
+	                            // Pseudo request
+	                            setTimeout(function() {
+	                                let $el = $(data.parentNode);
+	                                $el.fadeOut(300, () => {
+	                                    $el.remove();
+	                                });
+	                                res();
+	                            }, 1000);
+	                        });
+	                    }
+	                    workers.edit = function(data) {
+	                        return new Promise((res, rej) => {
+	                            // Pseudo request
+	                            setTimeout(function() {
+	                                res();
+	                            }, 1000);
+	                        });
+	                    }
+	                    emitter.all = function() {
+	                        console.log('Item event', arguments);
+	                    }
+	                }
+	                return plugin;
+	            }
+
+	            let counter = 1;
+	            function init() {
+	                let plugin = $('.items').fastEditor({
+	                    editMode: false,
+	                    controls: [{
+	                        tag: 'button',
+	                        label: 'Add new item',
+	                        action: 'add',
+	                        class: 'add-new-item-btn'
+	                    }],
+	                });
+	                if (plugin) {
+	                    let {workers, emitter} = plugin;
+	                    workers.add = function(data) {
+	                        return new Promise((res, rej) => {
+	                            setTimeout(function() {
+	                                let $el = $(data.parentNode);
+	                                let item = $(`<article class="item">
+											<h2 class="edit-it">Title ${counter++}</h2>
+											<p class="edit-it">Lorem ipsum dolor sit amet, consectetur adipisicing elit. Reiciendis sint quaerat sunt asperiores perferendis odio facere sed explicabo recusandae illo.</p>
+										</article>`);
+	                                initForItems(item);
+	                                $el.append(item);
+	                                res();
+	                            }, 1000);
+	                        });
+	                    }
+	                    emitter.all = function() {
+	                        console.log('Items event', arguments);
+	                    }
+	                }
+	                return plugin;
+	            }
+
+	            init();
+	            initForItems();
+
+
+	            $destroy = $('#destroy');
+	            let destroyed = false;
+	            $destroy.on('click', e => {
+	                e.preventDefault();
+	                if (destroyed) {
+	                    init();
+	                    initForItems();
+	                    destroyed = false
+	                    $destroy.text('Destroy');
+	                } else {
+	                    destroyed = true
+	                    $('.items').fastEditor('destroy');
+	                    $('.item').fastEditor('destroy');
+	                    $destroy.text('Init');
+	                }
+	            });
+
+	            let actived = true;
+	            let $switcher = $('#switcher');
+	            $switcher.on('click', e => {
+	                e.preventDefault();
+	                if (actived) {
+	                    actived = false;
+	                    $('.items').fastEditor('disable');
+	                    $('.item').fastEditor('disable');
+	                    $switcher.text('Enable');
+	                } else {
+	                    actived = true;
+	                    $('.items').fastEditor('enable');
+	                    $('.item').fastEditor('enable');
+	                    $switcher.text('Disable');
+	                }
+	            });
+	        });
+	    })(window.jQuery ? window.jQuery : cash);
+    </script>
+</body>
+
+</html>
