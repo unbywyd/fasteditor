@@ -1,10 +1,11 @@
 {
   "name": "fasteditor",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Very simple content editor jQuery plugin on promises",
   "keywords": ["editor"],
   "main": "app/src/fasteditor.js",
   "dependencies": {},
+  "homepage": "https://ungic.com/fasteditor/",
   "devDependencies": {},
   "author": "unbywyd",
   "license": "ISC"

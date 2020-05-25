@@ -117,7 +117,7 @@ if (typeof define === 'function' && define.amd) {
         if(this.options.editMode && $(this.el).find(this.options.editElementSelector).length) {
             let $editElements = $(this.el).find(this.options.editElementSelector);
             $editElements.addClass('__fasteditor-editor __fasteditor-editor' + this.id); //.attr('data-fe-action', 'edit');
-
+            $editElements.attr('tabindex', 0);
             if($editElements.length) {
                 for(let el of $editElements) {
                     let $el = $(el);
@@ -144,7 +144,7 @@ if (typeof define === 'function' && define.amd) {
                 parentNode: this.el,
                 node: e.currentTarget
             }
-            this.eventer.emit('do', action, data);
+            this.eventer.emit(action, data);
             this.worker.do(action, data).then(e => {
                 $this.removeClass('__fasteditor-loading');
                 $this.addClass('__fasteditor-success');
@@ -164,6 +164,7 @@ if (typeof define === 'function' && define.amd) {
             }
             let $this = $(e.currentTarget), id = $this.attr(this.options.attr);
             $(document).on('blur.fe, focus.fe, click.fe', this.unfocusHandler);
+            $(document).on('keydown.fe', this.keydownEditorHandler);
             if($this.data('fe-editable')) {
                 return
             }
@@ -173,7 +174,7 @@ if (typeof define === 'function' && define.amd) {
             $this.data('fe-editable', true);
             $this.addClass('__fasteditor-editable');
             let content = $this.html();
-            this.eventer.emit('do', 'startEdit', {
+            this.eventer.emit('startEdit', {
                 id: this.id,
                 parentNode: this.el,
                 node: e.currentTarget,
@@ -186,17 +187,19 @@ if (typeof define === 'function' && define.amd) {
                 id
             }
         }
-
+        this.keydownEditorHandler = e => {
+            if(e.keyCode == 27 && this.activeEditor) {
+                e.preventDefault();
+                this.closeActiveEditor(true);
+            }
+        }
         this.unfocusHandler = e => {
             e.preventDefault();
             if(this.activeEditor && this.activeEditor.el != e.target) {
                 let activeEditor = this.activeEditor;
                 let $this = $(activeEditor.el);
-                delete this.activeEditor;
-                $(document).off('blur.fe, focus.fe, click.fe', this.unfocusHandler);
-                $this.data('fe-editable', false).attr('contenteditable', false).removeClass('__fasteditor-editable');
                 let content = $this.html();
-
+                this.closeActiveEditor();
                 if(content === activeEditor.content) {
                     return
                 }
@@ -211,7 +214,7 @@ if (typeof define === 'function' && define.amd) {
 
                 $this.addClass('__fasteditor-loading');
                 $this.data('fe-loading', true);
-                this.eventer.emit('do', 'afterEdit', data);
+                this.eventer.emit('afterEdit', data);
                 this.worker.do('edit', data).then(e => {
                     $this.removeClass('__fasteditor-loading');
                     $this.addClass('__fasteditor-success');
@@ -247,10 +250,26 @@ if (typeof define === 'function' && define.amd) {
         this.enable();
         this.inited = true;
     }
+    fasteditor.prototype.closeActiveEditor = function(reset) {
+        if(this.activeEditor) {
+            $(document).off('blur.fe, focus.fe, click.fe', this.unfocusHandler);
+            $(document).off('keydown.fe', this.keydownEditorHandler);
+            $(this.activeEditor.el).data('fe-editable', false).attr('contenteditable', false).removeClass('__fasteditor-editable');
+            if(reset) {
+                $(this.activeEditor.el).html(this.activeEditor.content);
+            }
+            delete this.activeEditor;
+        }
+    }
     fasteditor.prototype.destroy = function() {
+        this.disable();
+        if(this.activeEditor) {
+            this.closeActiveEditor(true);
+        }
         this.inited = false;
         $(this.el).off('click.fe');
         $(document).off('blur.fe, focus.fe, click.fe', this.unfocusHandler);
+        $(document).off('keydown.fe', this.keydownEditorHandler);
         this.$controlsBox.remove();
         let classList = this.el.className.split(/\s+/);
         for(let className of classList) {
@@ -260,12 +279,15 @@ if (typeof define === 'function' && define.amd) {
         }
         if(this.options.editMode && $(this.el).find(this.options.editElementSelector).length) {
             let $editElements = $(this.el).find(this.options.editElementSelector);
-            let classList = $editElements[0].className.split(/\s+/);
-            for(let className of classList) {
-                if(className.indexOf('fasteditor') != -1) {
-                    $editElements.removeClass(className);
+            $editElements.each(function() {
+                $(this).removeAttr('data-fe-editable').removeAttr('contenteditable');
+                let classList = this.className.split(/\s+/);
+                for(let className of classList) {
+                    if(className.indexOf('fasteditor') != -1) {
+                        $editElements.removeClass(className);
+                    }
                 }
-            }
+            });
         }
         if(this.activeEditor) {
             $(document).trigger('click');
@@ -279,6 +301,11 @@ if (typeof define === 'function' && define.amd) {
                 $control.attr('disabled', true);
             }
         }
+        if(this.options.editMode && $(this.el).find(this.options.editElementSelector).length) {
+            $(this.el).find(this.options.editElementSelector).each(function() {
+                $(this).removeAttr('tabindex');
+            });
+        }
         $(this.el).addClass('__fasteditor-disabled');
     }
     fasteditor.prototype.enable = function() {
@@ -289,6 +316,11 @@ if (typeof define === 'function' && define.amd) {
             }
         }
         $(this.el).removeClass('__fasteditor-disabled');
+        if(this.options.editMode && $(this.el).find(this.options.editElementSelector).length) {
+            $(this.el).find(this.options.editElementSelector).each(function() {
+                $(this).attr('tabindex', 0);
+            });
+        }
     }
     fasteditor.prototype.status = function() {
         return {
