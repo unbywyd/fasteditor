@@ -181,6 +181,15 @@ if (typeof define === 'function' && define.amd) {
                 content
             });
             $this.attr('contenteditable', true);
+            let sel;
+            if (document.selection) {
+                sel = document.selection.createRange();
+                sel.moveStart('character', $this.text().length);
+                sel.select();
+            } else {
+                sel = window.getSelection();
+                sel.collapse($this[0].lastChild, $this.text().length);
+            }
             this.activeEditor = {
                 el: e.currentTarget,
                 content,
@@ -228,6 +237,16 @@ if (typeof define === 'function' && define.amd) {
         $(this.el).on('click.fe', '.__fasteditor-control' + this.id, this.controlsHandler);
         $(this.el).on('click.fe', '.__fasteditor-editor' + this.id, this.editableHandler);
 
+        this.keydownBeforeEditorHandler = e => {
+            if(this.disabled) {
+                return
+            }
+            if((e.keyCode == 13 || e.keyCode == 32) && !this.activeEditor) {
+                e.preventDefault();
+                $(e.currentTarget).trigger('click');
+            }
+        }
+        $(this.el).on('keydown.fe', '.__fasteditor-editor' + this.id, this.keydownBeforeEditorHandler);
 
         this.$controlsBox = $('<div/>', {
             class: '__fasteditor-controls'
@@ -269,6 +288,7 @@ if (typeof define === 'function' && define.amd) {
         this.inited = false;
         $(this.el).off('click.fe');
         $(document).off('blur.fe, focus.fe, click.fe', this.unfocusHandler);
+        $(this.el).off('keydown.fe', '.__fasteditor-editor' + this.id, this.keydownBeforeEditorHandler);
         $(document).off('keydown.fe', this.keydownEditorHandler);
         this.$controlsBox.remove();
         let classList = this.el.className.split(/\s+/);
